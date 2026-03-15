@@ -126,9 +126,12 @@
         </main>
 
         <!-- V2: 24h Log View -->
-        <main id="view-v2" class="view hidden">
             <div class="v2-header">
-                <h2>24時間規律ログ</h2>
+                <div class="v2-date-nav">
+                    <button id="btn-v2-prev" class="header-nav-btn glass-btn">前日</button>
+                    <h2 id="v2-current-date-display">24時間規律ログ</h2>
+                    <button id="btn-v2-next" class="header-nav-btn glass-btn">翌日</button>
+                </div>
                 <div class="v2-summary" id="v2-summary-chart">
                     <!-- Basic text or canvas chart injected here -->
                     <p id="v2-waste-text">データ集計中...</p>
