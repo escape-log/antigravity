@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Antigravity">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
+    <title>Antigravity</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app" class="app-container">
+        
+        <!-- Onboarding Modal -->
+        <div id="onboarding-modal" class="modal hidden">
+            <div class="modal-content glass-panel">
+                <h2 class="gradient-text">Welcome to Antigravity</h2>
+                <div class="onboarding-text">
+                    <p>「目標を決めてタイマーをスタート。集中を記録し、逃げた理由も残す。」</p>
+                    <p class="secondary-text">※ 右上の「→V2」から24時間ログへ移動できます。</p>
+                </div>
+                <button id="btn-onboarding-start" class="btn-primary ripple">はじめる</button>
+            </div>
+        </div>
+
+        <!-- App Header (Visible when needed) -->
+        <header class="app-header">
+            <h1 id="header-title" class="header-title">V1</h1>
+            <button id="nav-btn-v1-v2" class="header-nav-btn glass-btn">→V2</button>
+            <button id="btn-settings" class="header-nav-btn glass-btn">⚙️</button>
+        </header>
+
+        <!-- V1: Timer View -->
+        <main id="view-v1" class="view active">
+            
+            <!-- Pre-timer Setup -->
+            <div id="v1-setup" class="v1-stage active">
+                <div id="last-failure-banner" class="failure-banner hidden">
+                    <span class="icon">⚠️</span>
+                    <span id="last-failure-text">前回の敗因：「気が乗らなかった」（8分で放棄）</span>
+                </div>
+                
+                <div class="input-group">
+                    <label for="goal-input">今回の目標</label>
+                    <input type="text" id="goal-input" placeholder="例：英単語20個を覚える" class="glass-input">
+                </div>
+                
+                <div class="timer-slots">
+                    <label>タイマー時間</label>
+                    <div class="slot-buttons" id="timer-slots-container">
+                        <!-- Slots injected by JS -->
+                    </div>
+                </div>
+
+                <div class="action-orbit">
+                    <button id="btn-start-timer" class="btn-circular start-btn ripple">スタート</button>
+                </div>
+                
+                <div class="mt-20">
+                    <button id="btn-go-stats" class="btn-hollow block-btn">📊 統計</button>
+                </div>
+            </div>
+
+            <!-- Active Timer -->
+            <div id="v1-active" class="v1-stage hidden">
+                <div class="timer-ring">
+                    <svg class="progress-ring" height="260" width="260">
+                        <circle class="progress-ring-bg" stroke-width="8" fill="transparent" r="120" cx="130" cy="130" />
+                        <circle class="progress-ring-circle" stroke-width="8" fill="transparent" r="120" cx="130" cy="130" />
+                    </svg>
+                    <div class="time-display" id="time-display">25:00</div>
+                    <div class="current-goal-display" id="active-goal-text"></div>
+                </div>
+                <div class="action-orbit">
+                    <button id="btn-pause-timer" class="btn-circular pause-btn ripple">一時停止</button>
+                </div>
+            </div>
+            
+            <!-- Paused State overlay inside active -->
+            <div id="v1-paused" class="fullscreen-overlay hidden">
+                <div class="pause-countdown" id="pause-countdown-display">05:00</div>
+                <h3 class="overlay-title">決断の時</h3>
+                <div class="pause-actions">
+                    <button id="btn-resume-timer" class="btn-hollow ripple">復帰する</button>
+                    <button id="btn-abandon-timer" class="btn-danger ripple">放棄する</button>
+                </div>
+            </div>
+
+            <!-- Abandon Protocol Step 1 -->
+            <div id="v1-abandon-step1" class="fullscreen-overlay hidden">
+                <h3 class="overlay-title error-text">放棄理由の選択</h3>
+                <div class="excuse-list scroll-container" id="excuse-list-container">
+                    <!-- Injected by JS -->
+                </div>
+                <button id="btn-cancel-abandon" class="btn-hollow mt-20">キャンセル（タイマーに戻る）</button>
+            </div>
+
+            <!-- Abandon Protocol Step 2 (Loss Feedback) -->
+            <div id="v1-abandon-step2" class="fullscreen-overlay hidden">
+                <h3 class="overlay-title warning-text">【機会損失】</h3>
+                <p id="loss-feedback-text" class="loss-text">放棄したX分で、あとY個の...できた可能性があります。</p>
+                <div class="action-orbit mt-40">
+                    <button id="btn-loss-acknowledge" class="btn-primary ripple">次へ</button>
+                </div>
+            </div>
+
+            <!-- Session End Evaluation -->
+            <div id="v1-evaluation" class="fullscreen-overlay hidden">
+                <h3 class="overlay-title">このセットの達成率は？</h3>
+                <div class="rating-buttons">
+                    <button class="btn-rating" data-rate="0">0%</button>
+                    <button class="btn-rating" data-rate="25">25%</button>
+                    <button class="btn-rating" data-rate="50">50%</button>
+                    <button class="btn-rating" data-rate="75">75%</button>
+                    <button class="btn-rating full-rate" data-rate="100">100%</button>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- V2: 24h Log View -->
+        <main id="view-v2" class="view hidden">
+            <div class="v2-header">
+                <h2>24時間規律ログ</h2>
+                <div class="v2-summary" id="v2-summary-chart">
+                    <!-- Basic text or canvas chart injected here -->
+                    <p id="v2-waste-text">データ集計中...</p>
+                </div>
+            </div>
+            
+            <div id="v2-warning-banner" class="warning-banner hidden">
+                <span class="icon">⚠️</span> 本日の「不可抗力」が設定上限を超えています。本当に不可抗力でしたか？
+            </div>
+
+            <div class="log-grid" id="v2-log-grid">
+                <!-- 00:00 to 23:45 Slots injected by JS -->
+            </div>
+            
+            <!-- Slot Edit Modal -->
+            <div id="slot-edit-modal" class="modal hidden">
+                <div class="modal-content glass-panel">
+                    <h3 id="slot-edit-time">00:00</h3>
+                    <div class="evaluation-options">
+                        <button class="btn-eval eval-o" data-val="○">○ <small>完全勝利</small></button>
+                        <button class="btn-eval eval-t" data-val="△">△ <small>有意義</small></button>
+                        <button class="btn-eval eval-p" data-val="▲">▲ <small>不完全</small></button>
+                        <button class="btn-eval eval-s" data-val="□">□ <small>不可抗力</small></button>
+                        <button class="btn-eval eval-x" data-val="×">× <small>敗北</small></button>
+                    </div>
+                    <div class="slot-edit-fields">
+                        <div class="input-group" style="margin-bottom:12px;">
+                            <label style="font-size:12px; color:var(--text-secondary);">予定（何をする予定だったか）</label>
+                            <input type="text" id="slot-edit-plan" class="glass-input" placeholder="例：英単語の暗記">
+                        </div>
+                        <div class="input-group" style="margin-bottom:12px;">
+                            <label style="font-size:12px; color:var(--text-secondary);">実績（実際に何をしたか）</label>
+                            <input type="text" id="slot-edit-actual" class="glass-input" placeholder="例：英単語15個覚えた">
+                        </div>
+                    </div>
+                    <textarea id="slot-edit-memo" class="glass-input" placeholder="メモ（自由記入）..." rows="2"></textarea>
+                    <div class="modal-actions">
+                        <button id="btn-slot-close" class="btn-hollow">閉じる</button>
+                        <button id="btn-slot-save" class="btn-primary">保存</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Settings View -->
+        <main id="view-settings" class="view hidden">
+            <h2>設定・分析</h2>
+            
+            <div class="settings-section">
+                <h3>あなたの逃げランキング</h3>
+                <div class="ranking-filters">
+                    <button class="btn-filter active" data-period="all">全期間</button>
+                    <button class="btn-filter" data-period="month">月</button>
+                    <button class="btn-filter" data-period="week">週</button>
+                </div>
+                <ul id="excuse-ranking-list" class="ranking-list">
+                    <!-- Injected by JS -->
+                </ul>
+            </div>
+            
+            <div class="settings-section">
+                <h3>統計</h3>
+                <div id="stats-container" class="stats-grid">
+                    <!-- Injected by JS -->
+                </div>
+            </div>
+
+            <div class="settings-section mt-40">
+                <h3>カスタマイズ</h3>
+                <button id="btn-edit-slots" class="btn-hollow block-btn">タイマースロット編集</button>
+                <button id="btn-edit-excuses" class="btn-hollow block-btn">言い訳リスト編集</button>
+                <div class="input-group">
+                    <label>不可抗力上限警告のしきい値 (%)</label>
+                    <input type="number" id="threshold-input" class="glass-input" value="30">
+                </div>
+                
+                <div class="input-group mt-20">
+                    <label>リマインド通知時刻</label>
+                    <div class="flex-col">
+                        <div style="display:flex; align-items:center;">
+                            <span style="width:80px; font-size:12px; color:var(--text-secondary);">中間報告</span>
+                            <input type="time" id="remind-1" class="glass-input" style="flex:1">
+                        </div>
+                        <div style="display:flex; align-items:center;">
+                            <span style="width:80px; font-size:12px; color:var(--text-secondary);">夜の決算①</span>
+                            <input type="time" id="remind-2" class="glass-input" style="flex:1">
+                        </div>
+                        <div style="display:flex; align-items:center;">
+                            <span style="width:80px; font-size:12px; color:var(--text-secondary);">夜の決算②</span>
+                            <input type="time" id="remind-3" class="glass-input" style="flex:1">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="input-group mt-20">
+                    <label>データの管理</label>
+                    <div style="display:flex; gap:10px;">
+                        <button id="btn-export-data" class="btn-hollow" style="flex:1">エクスポート</button>
+                        <button id="btn-import-data" class="btn-hollow" style="flex:1">インポート</button>
+                    </div>
+                    <p style="font-size:10px; color:var(--text-secondary); margin-top:5px;">PCとiPhone間でデータを同期する場合に使用します。</p>
+                </div>
+                
+                <button id="btn-save-settings" class="btn-primary block-btn mt-20">設定を保存</button>
+            </div>
+        </main>
+
+        <!-- Statistics View -->
+        <main id="view-stats" class="view hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>統計</h2>
+                <button id="btn-stats-back" class="btn-hollow ripple" style="padding: 6px 16px; font-size:12px;">戻る</button>
+            </div>
+            
+            <div class="ranking-filters" style="margin-bottom: 20px;">
+                <button class="btn-filter active" data-period="day">日</button>
+                <button class="btn-filter" data-period="week">週</button>
+                <button class="btn-filter" data-period="month">月</button>
+            </div>
+
+            <div id="stats-content-container">
+                <!-- Summary Metrics (shared) -->
+                <div class="stats-overview" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                    <div class="glass-panel" style="padding:15px; text-align:center;">
+                        <h4 style="font-size:12px; color:var(--text-secondary); margin-bottom:5px;">合計集中時間</h4>
+                        <div id="stat-total-time" style="font-size:24px; font-weight:bold; color:var(--accent-blue)">0m</div>
+                    </div>
+                    <div class="glass-panel" style="padding:15px; text-align:center;">
+                        <h4 style="font-size:12px; color:var(--text-secondary); margin-bottom:5px;">完走率</h4>
+                        <div id="stat-completion-rate" style="font-size:24px; font-weight:bold; color:var(--accent-green)">0%</div>
+                    </div>
+                    <div class="glass-panel" style="padding:15px; text-align:center;">
+                        <h4 style="font-size:12px; color:var(--text-secondary); margin-bottom:5px;">平均達成率</h4>
+                        <div id="stat-avg-achievement" style="font-size:24px; font-weight:bold; color:var(--accent-purple)">0%</div>
+                    </div>
+                    <div class="glass-panel" style="padding:15px; text-align:center;">
+                        <h4 style="font-size:12px; color:var(--text-secondary); margin-bottom:5px;">セッション数</h4>
+                        <div id="stat-session-count" style="font-size:24px; font-weight:bold; color:white">0</div>
+                    </div>
+                </div>
+
+                <!-- Dynamic Content (List or Chart) -->
+                <div id="stats-dynamic-area" class="glass-panel" style="padding: 15px; border: 1px solid var(--glass-border); border-radius: var(--radius-md);">
+                    <div id="stats-empty-state" class="hidden" style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                        まだ記録がありません
+                    </div>
+                    <!-- Day: List -->
+                    <div id="stats-day-list" class="hidden">
+                        <ul id="stats-session-list" style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px;">
+                        </ul>
+                    </div>
+                    <!-- Week/Month: Chart -->
+                    <div id="stats-chart-area" class="hidden">
+                        <div id="stats-chart" style="display:flex; align-items:flex-end; justify-content:space-between; height:150px; padding-top:20px;">
+                            <!-- Bars injected by JS -->
+                        </div>
+                        <div id="stats-chart-labels" style="display:flex; justify-content:space-between; margin-top:10px; font-size:10px; color:var(--text-secondary);">
+                            <!-- Labels injected by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Extra: Excuse Ranking + V2 Evaluation Breakdown -->
+            <div id="stats-extra-area" class="glass-panel" style="padding:15px; margin-top:15px; border: 1px solid var(--glass-border); border-radius: var(--radius-md);">
+                <!-- Injected by Stats.renderExtraArea() -->
+            </div>
+        </main>
+
+        <!-- Simple Modal for Editing Arrays (Slots / Excuses) -->
+        <div id="array-edit-modal" class="modal hidden">
+            <div class="modal-content glass-panel" style="max-height: 80vh; overflow-y: auto;">
+                <h3 id="array-edit-title">編集</h3>
+                <div id="array-edit-list"></div>
+                <!-- Controls injected depending on context -->
+                <button id="btn-array-add" class="btn-hollow mt-10">+ 追加</button>
+                <div class="modal-actions mt-20">
+                    <button id="btn-array-close" class="btn-primary" style="width: 100%;">完了</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    
+    <!-- Scripts -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+    <script src="js/store.js"></script>
+    <script src="js/v2.js"></script>
+    <script src="js/v1.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/stats.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
